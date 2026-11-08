@@ -8,8 +8,9 @@ This system automates role discovery, matches qualifications using advanced LLM 
 ---
 
 ## 📌 Architecture Overview
+<img width="1795" height="897" alt="image" src="https://github.com/user-attachments/assets/e2bfa131-ca97-494c-a109-2893ab63cf6d" />
 
-![Workflow Architecture](workflow-architecture.png)
+
 
 The project consists of two scheduled autonomous tracks:
 
