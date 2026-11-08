@@ -1,0 +1,683 @@
+{
+  "name": "Career Agent - All Roles & Fresh Jobs Multi-Platform",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "01fee98a-37f3-4e85-a9f3-bf6d54fe22ad",
+      "name": "Schedule Trigger (Every 2h)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1712,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://jsearch.p.rapidapi.com/search-v2",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "developer jobs in chicago"
+            },
+            {
+              "name": "num_pages",
+              "value": "1"
+            },
+            {
+              "name": "country",
+              "value": "us"
+            },
+            {
+              "name": "date_posted",
+              "value": "all"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-rapidapi-host",
+              "value": "jsearch.p.rapidapi.com"
+            },
+            {
+              "name": "x-rapidapi-key",
+              "value": "1965cb46d6msha579a7133c19fe2p11ab9djsnc91cf7b0869e"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "36bc33c3-a966-4eb7-8cf8-b0ed3ab0280a",
+      "name": "HTTP Request (Fetch Jobs All Platforms)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1488,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "id": "537c9398-941a-4239-bece-fb53d73cfe08",
+      "name": "Item Lists (Split Jobs)",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 3,
+      "position": [
+        -1264,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// סינון משרות שפורסמו לפני יותר מ-7 ימים או שאינן פעילות\nconst items = $input.all();\nconst now = new Date();\nconst filtered = [];\n\nfor (const item of items) {\n  const job = item.json;\n  let isFresh = true;\n  \n  if (job.job_posted_at_datetime_utc) {\n    const postedDate = new Date(job.job_posted_at_datetime_utc);\n    const diffDays = (now - postedDate) / (1000 * 60 * 60 * 24);\n    if (diffDays > 7) {\n      isFresh = false;\n    }\n  }\n  \n  if (job.job_is_remote === false && job.job_country !== 'IL') {\n    // אם זה לא בישראל או לא רמוט\n  }\n\n  if (isFresh && job.job_apply_link) {\n    filtered.push(item);\n  }\n}\n\nreturn filtered;"
+      },
+      "id": "02416109-8b17-49c6-85b3-f4fa7b4733d0",
+      "name": "Filter Recent Jobs (Max 7 Days)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1056,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Evaluate this job listing for Shir Echeverria across all 5 career paths:\nCompany: {{ $json.employer_name }}\nTitle: {{ $json.job_title }}\nPublisher / Source: {{ $json.job_publisher }}\nLocation: {{ $json.job_city || $json.job_country }}\nDescription: {{ $json.job_description }}\nApply Link: {{ $json.job_apply_link }}\n\nMatch across:\n1. Junior Product Manager (APM, Junior PM, Technical PM)\n2. Junior Data Operations / AI Operations / Prompt Specialist\n3. Junior Data Analyst / Business Analyst\n4. Junior QA Engineer / Automation Tester\n5. Junior Project Manager / Tech Ops\n\nReturn strict JSON format with keys:\nscore (number 0-100), category (Product/Ops/Analyst/QA/PM), reason (string in Hebrew explaining match to CV), has_email (boolean), recruiter_email (string or empty), hook_subject (string in Hebrew), hook_body (string in Hebrew matching the category).",
+        "options": {
+          "systemMessage": "You are Shir Echeverria's Career Agent. She has a B.A. in Economics and Hi-Tech Sciences from Bar-Ilan University. Match candidates across all 5 categories using verified anchors: 1) Product (Mortgage Mate PRD, RICE, architecture), 2) Ops (n8n multi-agent backend, PDF extraction, AI cloud), 3) Data (Discount Bank financial planning, Dan Hotels KPI incident analysis, Python ML flight & mental health models), 4) QA/Testing (ML model validation, API testing, security profiling precision), 5) PM (cross-department shifts, incident resolution, high-volume airline ticketing at El Al). Discard senior/lead roles. If score >= 85 and recruiter email is available, compose a 4-sentence Hook email in Hebrew referencing the specific role anchor. Return valid JSON only."
+        }
+      },
+      "id": "bd0e7fc7-0981-4099-ac9d-10c2c014903a",
+      "name": "Claude Agent (Match All 5 Roles)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -832,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "model": "claude-3-5-sonnet-20241022",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "09336477-9c9c-4939-a722-1c7147871a5c",
+      "name": "Anthropic Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [
+        -832,
+        432
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "thYo5kbs8uZytq2V",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $json.output || $json.text || '';\nlet parsed = {};\ntry {\n  const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();\n  parsed = JSON.parse(cleanText);\n} catch (e) {\n  parsed = { score: 0 };\n}\nreturn [{ json: { ...$json, analysis: parsed } }];"
+      },
+      "id": "4813dcf2-a3cf-4d06-9143-18540b243f20",
+      "name": "Parse Claude Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.analysis.score }}",
+              "rightValue": 85,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "561030ce-fe26-44d2-8cb3-3f604df32248",
+      "name": "If Score >= 85",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -384,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Job_Pipeline_Tracker",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "59d0f029-dc8e-4321-b71f-050e097c0121",
+      "name": "Google Sheets (Log Job)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -176,
+        144
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "mSbIOPTnzQobNadY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.analysis.has_email }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cad57f5b-123f-4893-9a50-cfa706603b16",
+      "name": "If Has Recruiter Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        48,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $('Parse Claude Output').item.json.email_subject }}",
+        "message": "={{ $('Parse Claude Output').item.json.outreach_email || $('Parse Claude Output').item.json.analysis?.hook_body }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "data"
+              }
+            ]
+          }
+        }
+      },
+      "id": "dad0a437-b99f-42ac-90ea-aa32d462d939",
+      "name": "Gmail (Create Draft)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        272,
+        32
+      ],
+      "webhookId": "afa212e6-a4a0-4e57-9c69-d48a798f7a66",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V9tM3OGlnrFt7pYl",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "shir18718@gmail.com",
+        "subject": "=🚨 התאמת משרה חמה [{{ $json.analysis.category }}]: {{ $json.job_title }} ב-{{ $json.employer_name }} ({{ $json.analysis.score }}%)",
+        "emailType": "text",
+        "message": "=היי שיר,\n\nנמצאה משרה חדשה ומעודכנת (עד שבוע מהפרסום):\nחברה: {{ $json.employer_name }}\nתפקיד: {{ $json.job_title }}\nתחום: {{ $json.analysis.category }}\nמקור פרסום: {{ $json.job_publisher || 'אתר גיוס / לינקדאין' }}\nציון התאמה: {{ $json.analysis.score }}%\n\nהפעולה הנדרשת:\n{{ $json.analysis.has_email ? '✉️ נוצרה טיוטה מוכנה ב-Gmail Drafts לשליחה למגייס/ת. היכנסי ואשרי לשליחה.' : '🔗 המשרה דורשת הגשה באתר/לינקדאין. קישור ישיר למשרה הפעילה: ' + $json.job_apply_link }}\n\nהתאמה לקו\"ח:\n{{ $json.analysis.reason }}",
+        "options": {}
+      },
+      "id": "b236c7df-70ef-420e-b19d-4c76f0dc898d",
+      "name": "Gmail (Send Alert to Shir)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        512,
+        144
+      ],
+      "webhookId": "373be9bb-da89-4b3c-9041-bcf9661dc493",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V9tM3OGlnrFt7pYl",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 16 * * 0-4"
+            }
+          ]
+        }
+      },
+      "id": "e0d94e5f-0cf4-48ac-8301-906178a3b384",
+      "name": "Daily Trigger (Sun-Thu 16:00)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1712,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "filters": {
+          "q": "newer_than:1d (is:unread OR subject:(ראיון OR משרה OR גיוס OR HR OR Recruiter OR \"שירות התעסוקה\"))"
+        }
+      },
+      "id": "11be89e7-4df8-40e6-bfe7-6b186430cd7c",
+      "name": "Gmail (Search Inbox 24h)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1472,
+        688
+      ],
+      "webhookId": "e86c38f7-20c6-4ccb-befc-8b5a61e6ecfd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "cDOnoRP2UvtbZRu2",
+          "name": "Gmail account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1oNa_cU7fxsys8NxZNpHV84xLQZU56Wj1BLGjFqM7IvE",
+          "mode": "list",
+          "cachedResultName": "Career Agent – Job Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1oNa_cU7fxsys8NxZNpHV84xLQZU56Wj1BLGjFqM7IvE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Job_Pipeline_Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1oNa_cU7fxsys8NxZNpHV84xLQZU56Wj1BLGjFqM7IvE/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "3c34f46f-dce5-44b2-b732-868bd683bdf8",
+      "name": "Google Sheets (Read Pipeline)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -1232,
+        688
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "R6JvmDBABGvIkufv",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Compile the 16:00 Executive Daily Briefing for Shir Echeverria.\n\nInput Inbox Messages:\n{{ JSON.stringify($('Gmail (Search Inbox 24h)').all().map(i => ({ from: i.json.from, subject: i.json.subject, snippet: i.json.snippet }))) }}\n\nInput Job Pipeline Rows:\n{{ JSON.stringify($json) }}\n\nFormat the output in clean Hebrew Markdown following the daily digest structure.",
+        "options": {
+          "systemMessage": "You are Shir Echeverria's Executive Career Digest Agent. Format the daily digest cleanly in Hebrew across all 5 career tracks (Product, Ops, Data, QA, Project Management). Structure: 1) Job applications overview by domain, 2) Pipeline & interview updates, 3) Inbox triage ranked by urgency (🔴 High, 🟡 Medium, 🟢 Low), 4) Ready hook drafts in Gmail awaiting approval."
+        }
+      },
+      "id": "eac9eb42-ccac-4940-ad29-29ec799b5cb8",
+      "name": "Claude Agent (Generate Daily Digest)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -992,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "model": "claude-3-haiku-20240307",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "c115d6c0-f7fc-4f68-8ccb-421c2bb299ad",
+      "name": "Anthropic Model (Digest)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [
+        -992,
+        896
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "xtPkpH0zRYGqvFdF",
+          "name": "Anthropic account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "shir18718@gmail.com",
+        "subject": "=📅 סיכום יומי – דסק קריירה – {{ $now.format('DD/MM/YYYY') }}",
+        "emailType": "text",
+        "message": "={{ $json.output || $json.text }}",
+        "options": {}
+      },
+      "id": "126df08f-4351-4e7e-8cab-ddf29bcd51dc",
+      "name": "Gmail (Send Daily Digest to Shir)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -736,
+        688
+      ],
+      "webhookId": "36f5cb73-884e-4d1c-b29a-c019248898d0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V9tM3OGlnrFt7pYl",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1iLSKBnkAhMsTrVdtiKz3p4MojZVQ2YLh",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        176,
+        304
+      ],
+      "id": "0ff69d87-5ee3-4116-b9af-63d9020bf29b",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "nsYMHlOhGhHGgUiu",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger (Every 2h)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (Fetch Jobs All Platforms)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request (Fetch Jobs All Platforms)": {
+      "main": [
+        [
+          {
+            "node": "Item Lists (Split Jobs)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Item Lists (Split Jobs)": {
+      "main": [
+        [
+          {
+            "node": "Filter Recent Jobs (Max 7 Days)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Recent Jobs (Max 7 Days)": {
+      "main": [
+        [
+          {
+            "node": "Claude Agent (Match All 5 Roles)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Agent (Match All 5 Roles)": {
+      "main": [
+        [
+          {
+            "node": "Parse Claude Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Claude Agent (Match All 5 Roles)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Claude Output": {
+      "main": [
+        [
+          {
+            "node": "If Score >= 85",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Score >= 85": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets (Log Job)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets (Log Job)": {
+      "main": [
+        [
+          {
+            "node": "If Has Recruiter Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Has Recruiter Email?": {
+      "main": [
+        [
+          {
+            "node": "Gmail (Create Draft)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail (Send Alert to Shir)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail (Create Draft)": {
+      "main": [
+        [
+          {
+            "node": "Gmail (Send Alert to Shir)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Trigger (Sun-Thu 16:00)": {
+      "main": [
+        [
+          {
+            "node": "Gmail (Search Inbox 24h)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail (Search Inbox 24h)": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets (Read Pipeline)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets (Read Pipeline)": {
+      "main": [
+        [
+          {
+            "node": "Claude Agent (Generate Daily Digest)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Model (Digest)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Claude Agent (Generate Daily Digest)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Agent (Generate Daily Digest)": {
+      "main": [
+        [
+          {
+            "node": "Gmail (Send Daily Digest to Shir)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Gmail (Create Draft)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "2575f938-3f81-45f0-8ddc-152af247dc72",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7725fbd0b9a7f0b8342891d2e2d27753045852e35de3e7f35df9f131891c55d6"
+  },
+  "id": "iKVGcOuTENmItXi1",
+  "tags": []
+}
